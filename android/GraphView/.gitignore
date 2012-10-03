@@ -1,0 +1,7 @@
+project.properties
+.classpath
+.project
+.factorypath
+gen
+bin
+.settings
