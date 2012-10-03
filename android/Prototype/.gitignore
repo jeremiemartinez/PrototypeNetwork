@@ -2,3 +2,8 @@ project.properties
 .classpath
 .project
 .factorypath
+gen
+apt_generated
+bin
+.settings
+assets
