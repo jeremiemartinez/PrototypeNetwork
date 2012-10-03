@@ -40,9 +40,18 @@ import com.jjoe64.graphview.LineGraphView;
 @EActivity
 public class MainActivity extends Activity {
 
-	private static final String FILE_URL = "http://upload.wikimedia.org/wikipedia/commons/a/ab/San_Francisco_panorama_from_Twin_Peaks.jpg"; // 5.9MB
+	/**************************************************************************/
+	/**     Constants                                                         */
+	/**************************************************************************/
+
+	private static final String FILE_URL = "http://upload.wikimedia.org/wikipedia/commons/c/c2/Space_Needle_panorama_large.jpg"; // 8.9MB
+	private static final int INIT_RATE = 300; // Kbs
 	private static final int MAX_RATE = 1024; // Kbs
 	private static final int DELAY = 250; // ms
+
+	/**************************************************************************/
+	/**     Views                                                             */
+	/**************************************************************************/
 
 	@ViewById(R.id.traffic_txt)
 	TextView traffic_txt;
@@ -62,7 +71,9 @@ public class MainActivity extends Activity {
 	@ViewById(R.id.download)
 	ProgressBar download;
 
-	private boolean isDownloading;
+	/**************************************************************************/
+	/**     Util classes                                                      */
+	/**************************************************************************/
 
 	private final BroadcastReceiver receiver = new BroadcastReceiver() {
 		@Override
@@ -105,6 +116,12 @@ public class MainActivity extends Activity {
 		}
 	}
 
+	/**************************************************************************/
+	/**     Members                                                           */
+	/**************************************************************************/
+
+	private boolean isDownloading;
+
 	private long currentData;
 
 	private Handler handler = new Handler();
@@ -115,7 +132,11 @@ public class MainActivity extends Activity {
 
 	private int txcount;
 
-	private double maxRate; 
+	private double maxRate;
+
+	/**************************************************************************/
+	/**     Life-cycle                                                        */
+	/**************************************************************************/ 
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
@@ -133,7 +154,7 @@ public class MainActivity extends Activity {
 	@AfterViews
 	protected void init() {
 		GraphView graphView = new LineGraphView(this, "traffic");
-		graphView.setManualYAxisBounds(1024d, 0d);
+		graphView.setManualYAxisBounds(INIT_RATE, 0d);
 		graph.addView(graphView);
 	}
 
@@ -146,29 +167,46 @@ public class MainActivity extends Activity {
 			traffic_txt.setText("No Wifi");
 	}
 
-	private boolean isConnected() {
-		ConnectivityManager conn =  (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-		NetworkInfo networkInfo = conn.getActiveNetworkInfo();
-		return networkInfo != null && networkInfo.getType() == ConnectivityManager.TYPE_WIFI;
-	}
-
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
 		getMenuInflater().inflate(R.menu.activity_main, menu);
 		return true;
 	}
 
+	/**************************************************************************/
+	/**     Button                                                            */
+	/**************************************************************************/
+
 	@Click(R.id.button)
-	public void startDownload(View view) {
-		if (isDownloading || !isConnected())
+	public void clic(View view) {
+		if (isDownloading) {
+			isDownloading = false;
+			button.setText(R.string.txt_button);
 			return;
-		isDownloading = true;
-		button.setEnabled(false);
+		}
+		if (!isConnected())
+			return;
+		button.setText(R.string.txt_button_alt);
 		startDownload();
 	}
 
+	/**************************************************************************/
+	/**     Network                                                           */
+	/**************************************************************************/
+
+	private boolean isConnected() {
+		ConnectivityManager conn =  (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+		NetworkInfo networkInfo = conn.getActiveNetworkInfo();
+		return networkInfo != null && networkInfo.getType() == ConnectivityManager.TYPE_WIFI;
+	}
+
+	/**************************************************************************/
+	/**     Download                                                          */
+	/**************************************************************************/
+
 	@Background
 	protected void startDownload() {
+		isDownloading = true;
 		trafficProcessor.reset();
 		resetDownload();
 		handler.postDelayed(trafficProcessor, DELAY);
@@ -194,6 +232,8 @@ public class MainActivity extends Activity {
 			int readBytes;
 			int dispc = 0;
 			while ((readBytes = in.read(buffer)) != -1) {
+				if (!isDownloading)
+					break;
 				file.add(new String(buffer, 0, readBytes));
 				currentData += readBytes;
 				if (dispc++ > 20) {
@@ -209,9 +249,13 @@ public class MainActivity extends Activity {
 		}
 	}
 
+	/**************************************************************************/
+	/**     Ui update                                                         */
+	/**************************************************************************/
+
 	@UiThread
 	protected void enableButton() {
-		button.setEnabled(true);
+		button.setText(R.string.txt_button);
 	}
 
 	@UiThread
@@ -232,7 +276,7 @@ public class MainActivity extends Activity {
 
 	private void updateGraph(double rate) {
 		GraphView graphView  = new LineGraphView(this, "traffic");
-		graphView.setManualYAxisBounds((maxRate <= 300) ? 300 : maxRate, 0d);
+		graphView.setManualYAxisBounds((maxRate <= INIT_RATE) ? INIT_RATE : maxRate, 0d);
 		plots.add(new GraphViewData(txcount++, rate));
 
 		GraphViewData[] aplots = new GraphViewData[plots.size()];
