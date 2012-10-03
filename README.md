@@ -1,2 +1,1 @@
-Jérémie Martinez
-Luc Ponnau
+Jérémie Martinez - Luc Ponnau
