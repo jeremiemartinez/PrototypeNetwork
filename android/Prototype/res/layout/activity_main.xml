@@ -1,0 +1,70 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical" >
+
+    <TextView
+        android:id="@+id/traffic_txt"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginBottom="16dp"
+        android:layout_marginTop="16dp"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:text="@string/traffic_txt"
+        android:textAppearance="?android:attr/textAppearanceLarge" />
+
+    <ProgressBar
+        android:id="@+id/traffic"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        android:layout_marginLeft="32dp"
+        android:layout_marginRight="32dp"
+        android:layout_weight="1" />
+
+    <LinearLayout
+        android:id="@+id/graph"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginBottom="16dp"
+        android:layout_marginLeft="32dp"
+        android:layout_marginRight="32dp"
+        android:layout_weight="3" />
+
+    <Button
+        android:id="@+id/button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        android:layout_marginLeft="32dp"
+        android:layout_marginRight="32dp"
+        android:layout_weight="1"
+        android:text="@string/txt_button" />
+
+    <TextView
+        android:id="@+id/download_txt"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginBottom="16dp"
+        android:layout_marginTop="16dp"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:text="@string/download_txt"
+        android:textAppearance="?android:attr/textAppearanceLarge" />
+
+    <ProgressBar
+        android:id="@+id/download"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="32dp"
+        android:layout_marginRight="32dp"
+        android:layout_weight="1"
+        android:progress="0" />
+
+</LinearLayout>
