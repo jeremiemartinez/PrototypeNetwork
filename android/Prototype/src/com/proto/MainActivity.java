@@ -6,7 +6,6 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -22,7 +21,6 @@ import android.os.Handler;
 import android.view.Menu;
 import android.view.View;
 import android.widget.Button;
-import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
@@ -32,10 +30,8 @@ import com.googlecode.androidannotations.annotations.Click;
 import com.googlecode.androidannotations.annotations.EActivity;
 import com.googlecode.androidannotations.annotations.UiThread;
 import com.googlecode.androidannotations.annotations.ViewById;
-import com.jjoe64.graphview.GraphView;
-import com.jjoe64.graphview.GraphView.GraphViewData;
-import com.jjoe64.graphview.GraphViewSeries;
-import com.jjoe64.graphview.LineGraphView;
+import com.proto.util.Graph;
+import com.proto.util.Window;
 
 @EActivity
 public class MainActivity extends Activity {
@@ -46,8 +42,10 @@ public class MainActivity extends Activity {
 
 	private static final String FILE_URL = "http://upload.wikimedia.org/wikipedia/commons/c/c2/Space_Needle_panorama_large.jpg"; // 8.9MB
 	private static final int INIT_RATE = 300; // Kbs
-	private static final int MAX_RATE = 1024; // Kbs
+	private static final int MAX_RATE = 1024; // ms
 	private static final int DELAY = 250; // ms
+	private static final int WIN_SIZE = 9; // ms
+	private static final int BUFFER_SIZE = 1448; // b
 
 	/**************************************************************************/
 	/**     Views                                                             */
@@ -60,7 +58,13 @@ public class MainActivity extends Activity {
 	ProgressBar traffic;
 
 	@ViewById(R.id.graph)
-	LinearLayout graph;
+	Graph graph;
+
+	@ViewById(R.id.graphA)
+	Graph graphA;
+
+	@ViewById(R.id.graphSA)
+	Graph graphSA;
 
 	@ViewById(R.id.button)
 	Button button;
@@ -86,22 +90,15 @@ public class MainActivity extends Activity {
 
 		private long lastProcessedTime;
 		private long lastProcessedData;
-		private boolean stop;
 
 		public void reset() {
 			lastProcessedTime = System.currentTimeMillis();
 			lastProcessedData = 0;
-			stop = false;
-		}
-
-		public void stop() {
-			stop = true;
-			resetTraffic();
 		}
 
 		@Override
 		public void run() {
-			if (stop)
+			if (!isDownloading)
 				return;
 
 			long currentTime = System.currentTimeMillis();
@@ -128,11 +125,7 @@ public class MainActivity extends Activity {
 
 	private TrafficProcessor trafficProcessor = new TrafficProcessor(); 
 
-	private ArrayList<GraphViewData> plots = new ArrayList<GraphViewData>();
-
-	private int txcount;
-
-	private double maxRate;
+	private Window window = new Window(WIN_SIZE);
 
 	/**************************************************************************/
 	/**     Life-cycle                                                        */
@@ -153,9 +146,9 @@ public class MainActivity extends Activity {
 
 	@AfterViews
 	protected void init() {
-		GraphView graphView = new LineGraphView(this, "traffic");
-		graphView.setManualYAxisBounds(INIT_RATE, 0d);
-		graph.addView(graphView);
+		graph.init(this, "Traffic", INIT_RATE);
+		graphA.init(this, "Average", INIT_RATE);
+		graphSA.init(this, "Square Average", INIT_RATE);
 	}
 
 	@AfterViews
@@ -220,14 +213,16 @@ public class MainActivity extends Activity {
 			readStream(in, urlConnection.getContentLength());
 		} catch (MalformedURLException e) {
 		} catch (IOException e) {
+			failed();
+			isDownloading = false;
 		} finally {
 			urlConnection.disconnect();
 		}
 	}
 
-	private void readStream(InputStream in, int length) throws IOException {
+	private void readStream(InputStream in, int length) {
 		try {
-			byte[] buffer = new byte[1448];
+			byte[] buffer = new byte[BUFFER_SIZE];
 			List<String> file = new LinkedList<String>();
 			int readBytes;
 			int dispc = 0;
@@ -242,10 +237,12 @@ public class MainActivity extends Activity {
 				}
 			}
 			updateDownload(((double) currentData)/((double) length), ((double) currentData) / 1024d);
+		} catch (IOException e) {
+			failed();
 		} finally {
 			isDownloading = false;
 			enableButton();
-			trafficProcessor.stop();
+			resetTraffic();
 		}
 	}
 
@@ -259,6 +256,12 @@ public class MainActivity extends Activity {
 	}
 
 	@UiThread
+	protected void failed() {
+		button.setText(R.string.txt_button);
+		download_txt.setText(R.string.fail);
+	}
+
+	@UiThread
 	protected void updateDownload(double progress, double data) {
 		String dispData = (data >= 1024) ? String.format("%.2f Mb", data / 1024d) : String.format("%.1f Kb", data);
 		download.setProgress((int) (progress * download.getMax()));
@@ -267,26 +270,14 @@ public class MainActivity extends Activity {
 
 	@UiThread
 	protected void updateTraffic(double rate) {
-		if (rate >= maxRate)
-			maxRate = rate;
-		updateGraph(rate);
 		traffic.setProgress((int) (rate / MAX_RATE * traffic.getMax()));
 		traffic_txt.setText((rate >= 1024) ? String.format("%.2f Mbs", rate / 1024d) : String.format("%.0f Kbs", rate));
-	}
 
-	private void updateGraph(double rate) {
-		GraphView graphView  = new LineGraphView(this, "traffic");
-		graphView.setManualYAxisBounds((maxRate <= INIT_RATE) ? INIT_RATE : maxRate, 0d);
-		plots.add(new GraphViewData(txcount++, rate));
+		window.add(rate);
 
-		GraphViewData[] aplots = new GraphViewData[plots.size()];
-		int i = 0;
-		for (GraphViewData g : plots)
-			aplots[i++] = g;
-
-		graphView.addSeries(new GraphViewSeries(aplots));
-		graph.removeAllViews();
-		graph.addView(graphView);
+		graph.addPlot(rate);
+		graphA.addPlot(window.getAverage());
+		graphSA.addPlot(window.getSquareAverage());
 	}
 
 	@UiThread
@@ -298,11 +289,11 @@ public class MainActivity extends Activity {
 
 	@UiThread
 	protected void resetTraffic() {
-		txcount = 0;
-		maxRate = 0;
+		window.reset();
+		graph.reset(INIT_RATE);
+		graphA.reset(INIT_RATE);
+		graphSA.reset(INIT_RATE);
 		traffic.setProgress(0);
 		checkConnection();
-		init();
-		plots.clear();
 	}
 }

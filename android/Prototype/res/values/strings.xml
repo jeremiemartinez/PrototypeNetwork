@@ -8,5 +8,6 @@
     <string name="txt_button_alt">Stop Download</string>
     <string name="traffic_txt">0 Kbs</string>
     <string name="download_txt">0 Kb   /   0 %</string>
+    <string name="fail">Download failed</string>
 
 </resources>
