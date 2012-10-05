@@ -66,6 +66,7 @@ public class Graph extends FrameLayout {
 	/**************************************************************************/
 
 	private void setGraph(GraphView graph) {
+		// mhm...
 		removeAllViews();
 		addView(graph);
 	}
